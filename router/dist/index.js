@@ -14,7 +14,18 @@ var index_default = {
     const upstreamUrl = ORIGIN + url.pathname + url.search;
     const upstreamRequest = new Request(upstreamUrl, request);
     upstreamRequest.headers.set("host", new URL(ORIGIN).host);
-    return fetch(upstreamRequest, { redirect: "manual" });
+    const upstreamResponse = await fetch(upstreamRequest, {
+      redirect: "manual",
+      cf: { cacheTtl: 0, cacheEverything: false, cacheTtlByStatus: { "200-599": 0 } }
+    });
+    const response = new Response(upstreamResponse.body, upstreamResponse);
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    response.headers.delete("CF-Cache-Status");
+    response.headers.delete("Age");
+    response.headers.delete("Expires");
+    response.headers.delete("ETag");
+    response.headers.delete("Last-Modified");
+    return response;
   }
 };
 export {
