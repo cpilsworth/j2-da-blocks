@@ -2,17 +2,15 @@ name = "j2api"
 main = "src/index.js"
 compatibility_date = "2026-05-14"
 
-# The worker serves UPSTREAM_PATH and proxies to UPSTREAM_BASE + UPSTREAM_PATH,
-# so a route swap can replace the original endpoint without changing callers.
-# Example route binding (uncomment and set zone_id):
-# routes = [
-#   { pattern = "www.jet2holidays.com/api/jet2/hotels/getfilteredhotels", zone_id = "<zone-id>" }
-# ]
+# The worker listens on PROXY_PATH and proxies to UPSTREAM_BASE + UPSTREAM_PATH.
+# UPSTREAM_PATH is the path on the upstream provider's host (third-party, not
+# ours), while PROXY_PATH is the path our worker exposes publicly.
 
 [vars]
 UPSTREAM_BASE = "https://www.jet2holidays.com"
 UPSTREAM_PATH = "/api/jet2/hotels/getfilteredhotels"
-CACHED_PATH = "/api/jet2/hotels/getcachedhotels"
+PROXY_PATH = "/api/j2/hotels/getfilteredhotels"
+CACHED_PATH = "/api/j2/hotels/getcachedhotels"
 
 [[rules]]
 type = "Text"

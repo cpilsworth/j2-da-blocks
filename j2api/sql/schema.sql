@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS hotels (
   rating_image_url TEXT,
   review_count INTEGER,
   awards TEXT,
-  jet2_awards TEXT,
+  j2_awards TEXT,
   is_villa INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );

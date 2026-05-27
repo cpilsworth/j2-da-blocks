@@ -1,5 +1,5 @@
 {
-  "$comment": "Static reference values for the j2api filter parameters. Lifted from the live /destinations/portugal filter dialog on jet2holidays.com. `areas` uses the area name as the id because the cached endpoint filters on the area string column, not the upstream numeric id.",
+  "$comment": "Static reference values for the j2api filter parameters. Lifted from the upstream /destinations/portugal filter dialog. `areas` uses the area name as the id because the cached endpoint filters on the area string column, not the upstream numeric id.",
   "hotelOrder": [
     { "id": "1", "label": "Recommended" },
     { "id": "2", "label": "Our rating high→low" },

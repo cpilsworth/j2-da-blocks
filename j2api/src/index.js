@@ -1,9 +1,9 @@
 // Cloudflare Worker:
-//   GET /api/jet2/hotels/getfilteredhotels  → proxies to Jet2holidays' POST endpoint
-//   GET /api/jet2/hotels/getcachedhotels    → answers from the local D1 cache (JSON)
-//   GET /html/jet2/hotels/getcachedhotels   → same as cached, but rendered to HTML
-//   GET /view/jet2/hotels/getcachedhotels   → decorated view JSON for json2html
-//   GET /templates/cards.mustache           → the Mustache template used above
+//   GET /api/j2/hotels/getfilteredhotels  → proxies to the upstream POST endpoint
+//   GET /api/j2/hotels/getcachedhotels    → answers from the local D1 cache (JSON)
+//   GET /html/j2/hotels/getcachedhotels   → same as cached, but rendered to HTML
+//   GET /view/j2/hotels/getcachedhotels   → decorated view JSON for json2html
+//   GET /templates/cards.mustache         → the Mustache template used above
 
 import Mustache from 'mustache';
 import OPENAPI_YAML from '../openapi.yaml';
@@ -26,8 +26,8 @@ Mustache.escape = (text) =>
 //   showVillasOnly  (True/False, default "False")
 //
 // Examples:
-//   /api/jet2/hotels/getfilteredhotels?predefinedResorts=573,575&starRatings=4,5
-//   /api/jet2/hotels/getcachedhotels?predefinedResorts=573,575&starRatings=4,5
+//   /api/j2/hotels/getfilteredhotels?predefinedResorts=573,575&starRatings=4,5
+//   /api/j2/hotels/getcachedhotels?predefinedResorts=573,575&starRatings=4,5
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 200;
@@ -73,20 +73,20 @@ export default {
       return json({ error: 'Method not allowed. Use GET.' }, 405, origin);
     }
 
-    if (url.pathname === env.UPSTREAM_PATH) {
+    if (url.pathname === env.PROXY_PATH) {
       return handleProxy(request, env, url);
     }
     if (url.pathname === env.CACHED_PATH) {
       return handleCached(env, url, origin);
     }
-    if (url.pathname === '/html/jet2/hotels/getcachedhotels') {
+    if (url.pathname === '/html/j2/hotels/getcachedhotels') {
       return handleCachedHtml(env, url, origin);
     }
-    if (url.pathname === '/view/jet2/hotels/getcachedhotels') {
+    if (url.pathname === '/view/j2/hotels/getcachedhotels') {
       return handleCachedView(env, url, origin);
     }
-    if (url.pathname.startsWith('/view/jet2/hotels/by-path/')) {
-      const tail = url.pathname.slice('/view/jet2/hotels/by-path/'.length);
+    if (url.pathname.startsWith('/view/j2/hotels/by-path/')) {
+      const tail = url.pathname.slice('/view/j2/hotels/by-path/'.length);
       return handleByPathView(env, url, origin, tail);
     }
     if (url.pathname === '/templates/cards.mustache') {
@@ -218,7 +218,7 @@ const FORM_HTML = `<!doctype html>
   const form = document.getElementById('f');
   const urlOut = document.getElementById('urlOut');
   const frame = document.getElementById('result');
-  const ENDPOINT = '/api/jet2/hotels/getcachedhotels';
+  const ENDPOINT = '/api/j2/hotels/getcachedhotels';
   const ARRAY_FIELDS = ['areas','starRatings','resorts','predefinedResorts','boardBasisIds','roomTypeIds'];
 
   function buildUrl() {
@@ -519,7 +519,7 @@ function brandClass(brand) {
 }
 
 function buildTeaserView(data) {
-  // Title mirrors Jet2's "Hotels in {Region}" header when results share a region,
+  // Title mirrors the upstream "Hotels in {Region}" header when results share a region,
   // otherwise falls back to a generic label.
   const regions = new Set(data.Hotels.map((h) => h.Region).filter(Boolean));
   const title =
@@ -662,9 +662,9 @@ function rowToHotel(r) {
       RatingValue: r.rating_value == null ? '' : String(r.rating_value),
       RatingImageUrl: r.rating_image_url ?? '',
       NumberOfReviews: r.review_count ?? 0,
-      Jet2HotelId: r.id,
+      J2HotelId: r.id,
       Awards: safeJson(r.awards, []),
-      Jet2Awards: safeJson(r.jet2_awards, []),
+      J2Awards: safeJson(r.j2_awards, []),
     },
     ReviewCount: r.review_count ?? 0,
     IsVilla: !!r.is_villa,

@@ -6,15 +6,15 @@ A walk-through of how a request for `/hotels/portugal/algarve/vilamoura` becomes
 
 ### 1. D1 database
 
-A Cloudflare D1 (SQLite) database holds the canonical hotel catalogue: name, brand, image, star rating, review count, country (`region`), area, resort, key selling points, and a few booking-time attributes. ~444 hotels at the time of writing, harvested from the Jet2holidays upstream and cached locally so we never call the live booking API at render time.
+A Cloudflare D1 (SQLite) database holds the canonical hotel catalogue: name, brand, image, star rating, review count, country (`region`), area, resort, key selling points, and a few booking-time attributes. ~444 hotels at the time of writing, harvested from the upstream provider and cached locally so we never call the live booking API at render time.
 
 ### 2. JSON API — `j2api` Cloudflare Worker
 
 Reads D1 and exposes a small set of HTTP endpoints at `https://j2api.cpilsworth.workers.dev`:
 
-- `GET /api/jet2/hotels/getcachedhotels` — raw JSON matching the upstream Jet2 shape.
-- `GET /view/jet2/hotels/getcachedhotels` — the same data **decorated for the template** (precomputed star arrays, responsive `<picture>` srcsets, brand class names, etc.).
-- `GET /view/jet2/hotels/by-path/{country}[/{region}[/{resort}]]` — the path-based variant. The handler slugifies stored place names ("Olhos D'Agua (Albufeira)" → `olhos-dagua-albufeira`) so URL slugs match without a separate slug column.
+- `GET /api/j2/hotels/getcachedhotels` — raw JSON matching the upstream wire shape.
+- `GET /view/j2/hotels/getcachedhotels` — the same data **decorated for the template** (precomputed star arrays, responsive `<picture>` srcsets, brand class names, etc.).
+- `GET /view/j2/hotels/by-path/{country}[/{region}[/{resort}]]` — the path-based variant. The handler slugifies stored place names ("Olhos D'Agua (Albufeira)" → `olhos-dagua-albufeira`) so URL slugs match without a separate slug column.
 - `GET /templates/cards-page.mustache` — the Mustache template, served as plain text.
 - `GET /reference.json` — filter taxonomies for the URL builder UI.
 
@@ -28,7 +28,7 @@ The view endpoint is deliberately separate from the raw JSON: AEM Live's rendere
 [{
   "path": "/hotels/",
   "regex": "/(?<=\\/hotels\\/).+$/",
-  "endpoint": "https://j2api.cpilsworth.workers.dev/view/jet2/hotels/by-path/{{id}}",
+  "endpoint": "https://j2api.cpilsworth.workers.dev/view/j2/hotels/by-path/{{id}}",
   "template": "https://j2api.cpilsworth.workers.dev/templates/cards-page.mustache"
 }]
 ```

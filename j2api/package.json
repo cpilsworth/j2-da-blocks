@@ -2,7 +2,7 @@
   "name": "j2api",
   "version": "0.1.0",
   "private": true,
-  "description": "Cloudflare Worker translating GET requests with filter/sort URL params into Jet2holidays' /api/jet2/hotels/getfilteredhotels POST.",
+  "description": "Cloudflare Worker translating GET requests with filter/sort URL params into the upstream hotel-filter POST endpoint.",
   "main": "src/index.js",
   "scripts": {
     "dev": "wrangler dev",
