@@ -1,8 +1,9 @@
-/* eslint-disable import/no-cycle */
+/* eslint-disable import/no-cycle, no-console */
 import { NX_ORIGIN } from './scripts.js';
 
 let expMod;
 const DA_EXP = '/public/plugins/exp/exp.js';
+const DEBUG_PREFIX = '[sidekick-domain-switcher]';
 const LIVE_DOMAINS = {
   retail: 'retail.diffatech.co.uk',
   trade: 'trade.diffatech.co.uk',
@@ -29,6 +30,14 @@ const LIVE_DOMAIN_PLUGINS = [
   },
 ];
 
+function debugDomainSwitch(message, data = {}) {
+  console.debug(DEBUG_PREFIX, message, data);
+}
+
+function errorDomainSwitch(message, error, data = {}) {
+  console.error(DEBUG_PREFIX, message, { ...data, error });
+}
+
 async function toggleExp() {
   const exists = document.querySelector('#aem-sidekick-exp');
 
@@ -43,17 +52,32 @@ async function toggleExp() {
   expMod.default();
 }
 
-function openLiveDomain(hostname) {
-  const url = new URL(window.location.href);
-  url.protocol = 'https:';
-  if (hostname === LIVE_DOMAINS.trade && url.hostname === LIVE_DOMAINS.retail) {
-    url.pathname = url.pathname.replace(/^\/trade(?=\/|$)/, '') || '/';
-  } else if (hostname === LIVE_DOMAINS.retail && url.hostname === LIVE_DOMAINS.trade) {
-    url.pathname = url.pathname === '/' ? '/trade' : `/trade${url.pathname}`;
+function openLiveDomain(hostname, source = 'unknown') {
+  try {
+    const currentUrl = window.location.href;
+    const url = new URL(currentUrl);
+    url.protocol = 'https:';
+    if (hostname === LIVE_DOMAINS.trade && url.hostname === LIVE_DOMAINS.retail) {
+      url.pathname = url.pathname.replace(/^\/trade(?=\/|$)/, '') || '/';
+    } else if (hostname === LIVE_DOMAINS.retail && url.hostname === LIVE_DOMAINS.trade) {
+      url.pathname = url.pathname === '/' ? '/trade' : `/trade${url.pathname}`;
+    }
+    url.hostname = hostname;
+    url.port = '';
+    debugDomainSwitch('navigating to live domain', {
+      source,
+      currentUrl,
+      targetHost: hostname,
+      targetUrl: url.href,
+    });
+    window.location.assign(url.href);
+  } catch (error) {
+    errorDomainSwitch('failed to switch live domain', error, {
+      source,
+      currentUrl: window.location.href,
+      targetHost: hostname,
+    });
   }
-  url.hostname = hostname;
-  url.port = '';
-  window.location.assign(url.href);
 }
 
 function getPluginId(payload) {
@@ -65,7 +89,12 @@ function getPluginId(payload) {
 function openPluginLiveDomain({ detail } = {}) {
   const pluginId = getPluginId(detail);
   const plugin = LIVE_DOMAIN_PLUGINS.find(({ id }) => id === pluginId);
-  if (plugin) openLiveDomain(plugin.host);
+  debugDomainSwitch('plugin-used event received', { pluginId, detail });
+  if (plugin) {
+    openLiveDomain(plugin.host, 'plugin-used');
+    return;
+  }
+  debugDomainSwitch('plugin-used event ignored', { pluginId, detail });
 }
 
 function isLiveDomain() {
@@ -101,6 +130,14 @@ function removeCurrentLiveDomainPlugin(sk) {
 }
 
 function syncLiveDomainPlugins(sk) {
+  debugDomainSwitch('syncing live domain plugins', {
+    hostname: window.location.hostname,
+    isLiveDomain: isLiveDomain(),
+    sidekickHasAdd: typeof sk.add === 'function',
+    sidekickHasGet: typeof sk.get === 'function',
+    sidekickHasRemove: typeof sk.remove === 'function',
+  });
+
   if (!isLiveDomain()) {
     removeLiveDomainPlugins(sk);
     return;
@@ -127,11 +164,23 @@ function syncLiveDomainPlugins(sk) {
 (async function sidekick() {
   const sk = document.querySelector('aem-sidekick');
   if (!sk) return;
-  sk.addEventListener('custom:experimentation', toggleExp);
-  LIVE_DOMAIN_PLUGINS.forEach((plugin) => {
-    sk.addEventListener(`custom:${plugin.event}`, () => openLiveDomain(plugin.host));
-  });
-  sk.addEventListener('plugin-used', openPluginLiveDomain);
-  sk.addEventListener('pluginused', openPluginLiveDomain);
-  syncLiveDomainPlugins(sk);
+  try {
+    sk.addEventListener('custom:experimentation', toggleExp);
+    LIVE_DOMAIN_PLUGINS.forEach((plugin) => {
+      sk.addEventListener(`custom:${plugin.event}`, ({ detail } = {}) => {
+        debugDomainSwitch('custom live domain event received', {
+          event: `custom:${plugin.event}`,
+          detail,
+        });
+        openLiveDomain(plugin.host, `custom:${plugin.event}`);
+      });
+    });
+    sk.addEventListener('plugin-used', openPluginLiveDomain);
+    sk.addEventListener('pluginused', openPluginLiveDomain);
+    syncLiveDomainPlugins(sk);
+  } catch (error) {
+    errorDomainSwitch('failed to initialize sidekick domain switcher', error, {
+      hostname: window.location.hostname,
+    });
+  }
 }());
