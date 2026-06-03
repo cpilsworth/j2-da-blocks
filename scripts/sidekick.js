@@ -46,6 +46,11 @@ async function toggleExp() {
 function openLiveDomain(hostname) {
   const url = new URL(window.location.href);
   url.protocol = 'https:';
+  if (hostname === LIVE_DOMAINS.trade && url.hostname === LIVE_DOMAINS.retail) {
+    url.pathname = url.pathname.replace(/^\/trade(?=\/|$)/, '') || '/';
+  } else if (hostname === LIVE_DOMAINS.retail && url.hostname === LIVE_DOMAINS.trade) {
+    url.pathname = url.pathname === '/' ? '/trade' : `/trade${url.pathname}`;
+  }
   url.hostname = hostname;
   url.port = '';
   window.location.assign(url.href);
