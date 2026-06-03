@@ -51,6 +51,18 @@ function openLiveDomain(hostname) {
   window.location.assign(url.href);
 }
 
+function getPluginId(payload) {
+  if (typeof payload === 'string') return payload;
+  if (!payload || typeof payload !== 'object') return '';
+  return payload.id || payload.data?.id || '';
+}
+
+function openPluginLiveDomain({ detail } = {}) {
+  const pluginId = getPluginId(detail);
+  const plugin = LIVE_DOMAIN_PLUGINS.find(({ id }) => id === pluginId);
+  if (plugin) openLiveDomain(plugin.host);
+}
+
 function isLiveDomain() {
   return Object.values(LIVE_DOMAINS).includes(window.location.hostname);
 }
@@ -114,5 +126,7 @@ function syncLiveDomainPlugins(sk) {
   LIVE_DOMAIN_PLUGINS.forEach((plugin) => {
     sk.addEventListener(`custom:${plugin.event}`, () => openLiveDomain(plugin.host));
   });
+  sk.addEventListener('plugin-used', openPluginLiveDomain);
+  sk.addEventListener('pluginused', openPluginLiveDomain);
   syncLiveDomainPlugins(sk);
 }());

@@ -2,6 +2,7 @@
   "project": "J2 Retail",
   "host": "retail.diffatech.co.uk",
   "trustedHosts": [
+    "retail.diffatech.co.uk",
     "trade.diffatech.co.uk"
   ],
   "plugins": [
