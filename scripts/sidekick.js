@@ -31,7 +31,7 @@ const LIVE_DOMAIN_PLUGINS = [
 ];
 
 function debugDomainSwitch(message, data = {}) {
-  console.debug(DEBUG_PREFIX, message, data);
+  console.log(DEBUG_PREFIX, message, data);
 }
 
 function errorDomainSwitch(message, error, data = {}) {
@@ -57,11 +57,6 @@ function openLiveDomain(hostname, source = 'unknown') {
     const currentUrl = window.location.href;
     const url = new URL(currentUrl);
     url.protocol = 'https:';
-    if (hostname === LIVE_DOMAINS.trade && url.hostname === LIVE_DOMAINS.retail) {
-      url.pathname = url.pathname.replace(/^\/trade(?=\/|$)/, '') || '/';
-    } else if (hostname === LIVE_DOMAINS.retail && url.hostname === LIVE_DOMAINS.trade) {
-      url.pathname = url.pathname === '/' ? '/trade' : `/trade${url.pathname}`;
-    }
     url.hostname = hostname;
     url.port = '';
     debugDomainSwitch('navigating to live domain', {
