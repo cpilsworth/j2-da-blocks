@@ -5,6 +5,8 @@
     "retail.diffatech.co.uk",
     "trade.diffatech.co.uk"
   ],
+  "editUrlLabel": "Document Authoring",
+  "editUrlPattern": "https://trade.diffatech.co.uk/tools/sidekick/edit{{pathname}}",
   "plugins": [
     {
       "id": "live-domain-switcher",

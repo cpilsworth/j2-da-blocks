@@ -1,5 +1,8 @@
 const ORIGIN = 'https://main--j2retail--cpilsworth.aem.live';
 const ORIGIN_HOST = new URL(ORIGIN).host;
+const TRADE_HOST = 'trade.diffatech.co.uk';
+const EDIT_REDIRECT_PATH = '/tools/sidekick/edit';
+const DA_EDIT_BASE = 'https://da.live/edit#/cpilsworth/j2retail';
 const FETCH_OPTIONS = {
   redirect: 'manual',
   cf: { cacheTtl: 0, cacheEverything: false, cacheTtlByStatus: { '200-599': 0 } },
@@ -32,6 +35,16 @@ async function fetchOrigin404(request) {
   return toWorkerResponse(upstreamResponse, { status: 404 });
 }
 
+function redirectSidekickEdit(url) {
+  const contentPath = url.pathname.slice(EDIT_REDIRECT_PATH.length) || '/';
+  const normalizedPath = contentPath.startsWith('/') ? contentPath : `/${contentPath}`;
+  const target = /^\/trade(\/|$)/i.test(normalizedPath)
+    ? `https://${TRADE_HOST}${normalizedPath}${url.search}`
+    : `${DA_EDIT_BASE}${normalizedPath}${url.search}`;
+
+  return Response.redirect(target, 302);
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -40,6 +53,10 @@ export default {
 
     if (!isTrade && !isRetail) {
       return fetchOrigin404(request);
+    }
+
+    if (url.pathname.startsWith(EDIT_REDIRECT_PATH)) {
+      return redirectSidekickEdit(url);
     }
 
     if (isRetail && /^\/trade(\/|$)/i.test(url.pathname)) {
