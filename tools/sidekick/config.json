@@ -1,0 +1,27 @@
+{
+  "project": "J2 Retail",
+  "plugins": [
+    {
+      "id": "open-retail-live",
+      "title": "Open Retail Site",
+      "event": "open-retail-live",
+      "environments": [
+        "dev",
+        "preview",
+        "live",
+        "prod"
+      ]
+    },
+    {
+      "id": "open-trade-live",
+      "title": "Open Trade Site",
+      "event": "open-trade-live",
+      "environments": [
+        "dev",
+        "preview",
+        "live",
+        "prod"
+      ]
+    }
+  ]
+}
