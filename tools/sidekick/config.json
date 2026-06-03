@@ -1,25 +1,33 @@
 {
   "project": "J2 Retail",
+  "host": "retail.diffatech.co.uk",
+  "trustedHosts": [
+    "trade.diffatech.co.uk"
+  ],
   "plugins": [
     {
-      "id": "open-retail-live",
-      "title": "Open Retail Site",
-      "event": "open-retail-live",
+      "id": "live-domain-switcher",
+      "title": "Live Site",
+      "isContainer": true,
       "environments": [
-        "dev",
-        "preview",
-        "live",
         "prod"
       ]
     },
     {
+      "containerId": "live-domain-switcher",
+      "id": "open-retail-live",
+      "title": "Retail",
+      "event": "open-retail-live",
+      "environments": [
+        "prod"
+      ]
+    },
+    {
+      "containerId": "live-domain-switcher",
       "id": "open-trade-live",
-      "title": "Open Trade Site",
+      "title": "Trade",
       "event": "open-trade-live",
       "environments": [
-        "dev",
-        "preview",
-        "live",
         "prod"
       ]
     }

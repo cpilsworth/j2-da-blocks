@@ -7,16 +7,23 @@ const LIVE_DOMAINS = {
   retail: 'retail.diffatech.co.uk',
   trade: 'trade.diffatech.co.uk',
 };
+const LIVE_DOMAIN_CONTAINER = {
+  id: 'live-domain-switcher',
+  title: 'Live Site',
+  isContainer: true,
+};
 const LIVE_DOMAIN_PLUGINS = [
   {
+    containerId: LIVE_DOMAIN_CONTAINER.id,
     id: 'open-retail-live',
-    title: 'Open Retail Site',
+    title: 'Retail',
     event: 'open-retail-live',
     host: LIVE_DOMAINS.retail,
   },
   {
+    containerId: LIVE_DOMAIN_CONTAINER.id,
     id: 'open-trade-live',
-    title: 'Open Trade Site',
+    title: 'Trade',
     event: 'open-trade-live',
     host: LIVE_DOMAINS.trade,
   },
@@ -44,6 +51,10 @@ function openLiveDomain(hostname) {
   window.location.assign(url.href);
 }
 
+function isLiveDomain() {
+  return Object.values(LIVE_DOMAINS).includes(window.location.hostname);
+}
+
 function getLiveDomainPlugins() {
   const { hostname } = window.location;
   if (hostname === LIVE_DOMAINS.retail) {
@@ -52,27 +63,43 @@ function getLiveDomainPlugins() {
   if (hostname === LIVE_DOMAINS.trade) {
     return LIVE_DOMAIN_PLUGINS.filter((plugin) => plugin.host === LIVE_DOMAINS.retail);
   }
-  return LIVE_DOMAIN_PLUGINS;
+  return [];
+}
+
+function removeLiveDomainPlugin(sk, pluginId) {
+  if (typeof sk.remove !== 'function') return;
+  if (typeof sk.get === 'function' && sk.get(pluginId)) sk.remove(pluginId);
+}
+
+function removeLiveDomainPlugins(sk) {
+  LIVE_DOMAIN_PLUGINS.forEach((plugin) => removeLiveDomainPlugin(sk, plugin.id));
+  removeLiveDomainPlugin(sk, LIVE_DOMAIN_CONTAINER.id);
 }
 
 function removeCurrentLiveDomainPlugin(sk) {
-  if (typeof sk.remove !== 'function') return;
-
   const currentDomainPlugin = LIVE_DOMAIN_PLUGINS.find((plugin) => (
     plugin.host === window.location.hostname
   ));
-  if (currentDomainPlugin && typeof sk.get === 'function' && sk.get(currentDomainPlugin.id)) {
-    sk.remove(currentDomainPlugin.id);
-  }
+  if (currentDomainPlugin) removeLiveDomainPlugin(sk, currentDomainPlugin.id);
 }
 
 function syncLiveDomainPlugins(sk) {
+  if (!isLiveDomain()) {
+    removeLiveDomainPlugins(sk);
+    return;
+  }
+
   removeCurrentLiveDomainPlugin(sk);
   if (typeof sk.add !== 'function') return;
+
+  if (typeof sk.get === 'function' && !sk.get(LIVE_DOMAIN_CONTAINER.id)) {
+    sk.add(LIVE_DOMAIN_CONTAINER);
+  }
 
   getLiveDomainPlugins().forEach((plugin) => {
     if (typeof sk.get === 'function' && sk.get(plugin.id)) return;
     sk.add({
+      containerId: plugin.containerId,
       id: plugin.id,
       title: plugin.title,
       event: plugin.event,
