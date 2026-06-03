@@ -16,30 +16,26 @@ const STORAGE_KEY = 'hotel-url-builder:apiBase';
 let STATIC_OPTIONS = {};
 
 function resolveReference(ref) {
-  const out = {};
-  for (const [k, v] of Object.entries(ref)) {
-    if (v && typeof v === 'object' && !Array.isArray(v) && typeof v.$ref === 'string') {
-      out[k] = ref[v.$ref] ?? [];
-    } else {
-      out[k] = v;
-    }
-  }
-  return out;
+  return Object.fromEntries(Object.entries(ref).map(([k, v]) => [
+    k,
+    v && typeof v === 'object' && !Array.isArray(v) && typeof v.$ref === 'string'
+      ? ref[v.$ref] ?? []
+      : v,
+  ]));
 }
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
+  Object.entries(attrs).forEach(([k, v]) => {
     if (k === 'class') node.className = v;
     else if (k === 'html') node.innerHTML = v;
     else if (v != null) node.setAttribute(k, v);
-  }
-  for (const c of [].concat(children)) {
-    if (c == null) continue;
+  });
+  [].concat(children).filter((c) => c != null).forEach((c) => {
     node.append(c.nodeType ? c : document.createTextNode(String(c)));
-  }
+  });
   return node;
 }
 
@@ -77,6 +73,15 @@ function paramKind(p) {
   return 'string';
 }
 
+function enumLabel(name, value) {
+  const ref = STATIC_OPTIONS[name];
+  if (Array.isArray(ref)) {
+    const match = ref.find((o) => !o.group && String(o.id) === String(value));
+    if (match) return `${value} — ${match.label}`;
+  }
+  return String(value);
+}
+
 function fieldFor(p) {
   const kind = paramKind(p);
   const id = `f-${p.name}`;
@@ -108,11 +113,11 @@ function fieldFor(p) {
     if (def == null) {
       control.append(el('option', { value: '' }, '(default)'));
     }
-    for (const v of p.schema.enum) {
+    p.schema.enum.forEach((v) => {
       const opt = el('option', { value: v }, enumLabel(p.name, v));
       if (def != null && String(v) === String(def)) opt.selected = true;
       control.append(opt);
-    }
+    });
   } else if ((kind === 'array' || kind === 'enum') && STATIC_OPTIONS[p.name]) {
     const opts = STATIC_OPTIONS[p.name];
     const flat = opts.flatMap((o) => (o.group ? o.options : [o]));
@@ -120,23 +125,26 @@ function fieldFor(p) {
       id, name: p.name, multiple: 'multiple', size: Math.min(flat.length, 10),
     });
     control.dataset.kind = 'multi';
-    for (const o of opts) {
+    opts.forEach((o) => {
       if (o.group) {
         const og = el('optgroup', { label: o.group });
-        for (const sub of o.options) og.append(el('option', { value: String(sub.id) }, sub.label));
+        o.options.forEach((sub) => og.append(el('option', { value: String(sub.id) }, sub.label)));
         control.append(og);
       } else {
         control.append(el('option', { value: String(o.id) }, o.label));
       }
-    }
+    });
   } else if (kind === 'array') {
     const long = (p.schema?.items?.type === 'integer') && p.name === 'predefinedResorts';
     control = el(long ? 'textarea' : 'input', { id, name: p.name, placeholder: 'comma-separated' });
     control.dataset.kind = 'array';
   } else if (kind === 'number') {
     control = el('input', {
-      id, name: p.name, type: 'number',
-      min: p.schema.minimum, max: p.schema.maximum,
+      id,
+      name: p.name,
+      type: 'number',
+      min: p.schema.minimum,
+      max: p.schema.maximum,
       placeholder: p.schema.default != null ? String(p.schema.default) : '',
     });
     control.dataset.kind = 'number';
@@ -153,40 +161,31 @@ function fieldFor(p) {
   return fs;
 }
 
-function enumLabel(name, value) {
-  const ref = STATIC_OPTIONS[name];
-  if (Array.isArray(ref)) {
-    const match = ref.find((o) => !o.group && String(o.id) === String(value));
-    if (match) return `${value} — ${match.label}`;
-  }
-  return String(value);
-}
-
 function collectValues(form) {
   const out = new URLSearchParams();
-  for (const control of form.querySelectorAll('[name]')) {
+  Array.from(form.querySelectorAll('[name]')).forEach((control) => {
     const { name } = control;
-    const kind = control.dataset.kind;
+    const { kind } = control.dataset;
     if (kind === 'tri-bool') {
       out.set(name, control.checked ? 'true' : 'false');
-      continue;
+      return;
     }
     if (kind === 'boolean') {
       if (control.checked) out.set(name, 'true');
-      continue;
+      return;
     }
     if (kind === 'multi') {
-      for (const opt of control.selectedOptions) out.append(name, opt.value);
-      continue;
+      Array.from(control.selectedOptions).forEach((opt) => out.append(name, opt.value));
+      return;
     }
     const raw = control.value?.trim();
-    if (!raw) continue;
+    if (!raw) return;
     if (kind === 'array') {
       raw.split(',').map((s) => s.trim()).filter(Boolean).forEach((v) => out.append(name, v));
     } else {
       out.set(name, raw);
     }
-  }
+  });
   return out;
 }
 
@@ -245,7 +244,7 @@ function render(spec, apiBase, context) {
 
   const form = el('form', { id: 'filters' });
   const params = paramsFromSpec(spec);
-  for (const p of params) form.append(fieldFor(p));
+  params.forEach((p) => form.append(fieldFor(p)));
 
   const urlJson = el('div', { class: 'url', id: 'url-json' });
   const urlHtml = el('div', { class: 'url', id: 'url-html' });
