@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define */
 // Cloudflare Worker:
 //   GET /api/j2/hotels/getfilteredhotels  → proxies to the upstream POST endpoint
 //   GET /api/j2/hotels/getcachedhotels    → answers from the local D1 cache (JSON)
@@ -7,21 +8,24 @@
 
 import Mustache from 'mustache';
 import OPENAPI_YAML from '../openapi.yaml';
+// eslint-disable-next-line import/extensions
 import REFERENCE from '../reference.json';
 
 // Default Mustache escape encodes "/" as "&#x2F;" which mangles URLs in href/src.
 // Override to keep the XSS-relevant escapes and leave "/" alone.
-Mustache.escape = (text) =>
+Mustache.escape = (text) => (
   String(text)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/'/g, '&#39;')
+);
 //
 // Supported query params (all optional, repeatable or comma-separated for arrays):
 //   areas, boardBasisIds, roomTypeIds, starRatings, resorts, predefinedResorts
-//   hotelOrder      (string, default "1": 1=Recommended, 2=Rating high→low, 3=low→high, 4=TripAdvisor)
+//   hotelOrder      (string, default "1": 1=Recommended, 2=Rating high→low,
+//                   3=low→high, 4=TripAdvisor)
 //   page            (integer, default 0; page size = 10)
 //   showVillasOnly  (True/False, default "False")
 //
@@ -327,12 +331,10 @@ async function handleProxy(request, env, url) {
 
   // Browsers forbid setting `Cookie` on fetch(), so callers can pass cookies
   // via `x-forwarded-cookie` instead. Same for user-agent.
-  const cookie =
-    request.headers.get('x-forwarded-cookie') ?? request.headers.get('cookie');
-  const userAgent =
-    request.headers.get('x-forwarded-user-agent') ??
-    request.headers.get('user-agent') ??
-    'j2api-worker/1.0';
+  const cookie = request.headers.get('x-forwarded-cookie') ?? request.headers.get('cookie');
+  const userAgent = request.headers.get('x-forwarded-user-agent')
+    ?? request.headers.get('user-agent')
+    ?? 'j2api-worker/1.0';
 
   const upstreamHeaders = {
     'content-type': 'application/json',
@@ -414,10 +416,10 @@ async function handleCachedView(env, url, origin) {
 function slugify(s) {
   return String(s ?? '')
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')   // strip combining accents
+    .replace(/[̀-ͯ]/g, '') // strip combining accents
     .toLowerCase()
-    .replace(/['’`]/g, '')         // drop apostrophes outright (don't hyphenate)
-    .replace(/[^a-z0-9]+/g, '-')        // any other non-alnum → hyphen
+    .replace(/['’`]/g, '') // drop apostrophes outright (don't hyphenate)
+    .replace(/[^a-z0-9]+/g, '-') // any other non-alnum → hyphen
     .replace(/^-+|-+$/g, '');
 }
 
@@ -437,7 +439,7 @@ async function handleByPathView(env, url, origin, tail) {
 
   // Pull all rows in the country and filter in JS. ~hundreds of rows max.
   const { results } = await env.DB.prepare(
-    'SELECT * FROM hotels WHERE LOWER(region) = ? OR ? = ""'
+    'SELECT * FROM hotels WHERE LOWER(region) = ? OR ? = ""',
   ).bind(countrySlug, countrySlug).all();
 
   let rows = results.filter((r) => slugify(r.region) === countrySlug);
@@ -474,14 +476,18 @@ async function handleByPathView(env, url, origin, tail) {
 function sortRows(rows, orderBy) {
   // orderBy is the SQL fragment from buildOrderBy(); map back to comparators.
   const desc = (k) => (a, b) => (b[k] ?? 0) - (a[k] ?? 0);
-  const asc  = (k) => (a, b) => (a[k] ?? 0) - (b[k] ?? 0);
+  const asc = (k) => (a, b) => (a[k] ?? 0) - (b[k] ?? 0);
   const reviews = desc('review_count');
   const tiebreak = (primary) => (a, b) => primary(a, b) || reviews(a, b);
   switch (orderBy) {
-    case 'ORDER BY h.star_rating DESC, h.review_count DESC': return [...rows].sort(tiebreak(desc('star_rating')));
-    case 'ORDER BY h.star_rating ASC, h.review_count DESC':  return [...rows].sort(tiebreak(asc('star_rating')));
-    case 'ORDER BY h.rating_value DESC, h.review_count DESC':return [...rows].sort(tiebreak(desc('rating_value')));
-    default: return [...rows].sort((a, b) => reviews(a, b) || desc('star_rating')(a, b));
+    case 'ORDER BY h.star_rating DESC, h.review_count DESC':
+      return [...rows].sort(tiebreak(desc('star_rating')));
+    case 'ORDER BY h.star_rating ASC, h.review_count DESC':
+      return [...rows].sort(tiebreak(asc('star_rating')));
+    case 'ORDER BY h.rating_value DESC, h.review_count DESC':
+      return [...rows].sort(tiebreak(desc('rating_value')));
+    default:
+      return [...rows].sort((a, b) => reviews(a, b) || desc('star_rating')(a, b));
   }
 }
 
@@ -498,10 +504,18 @@ async function handleCachedHtml(env, url, origin) {
 }
 
 const IMG_BREAKPOINTS = [
-  { media: '(min-width: 992px)', x1w: 425, x1h: 239, x2w: 850,  x2h: 478 },
-  { media: '(min-width: 768px)', x1w: 446, x1h: 251, x2w: 892,  x2h: 502 },
-  { media: '(min-width: 576px)', x1w: 733, x1h: 435, x2w: 1466, x2h: 870 },
-  { media: '(min-width: 414px)', x1w: 541, x1h: 304, x2w: 1082, x2h: 608 },
+  {
+    media: '(min-width: 992px)', x1w: 425, x1h: 239, x2w: 850, x2h: 478,
+  },
+  {
+    media: '(min-width: 768px)', x1w: 446, x1h: 251, x2w: 892, x2h: 502,
+  },
+  {
+    media: '(min-width: 576px)', x1w: 733, x1h: 435, x2w: 1466, x2h: 870,
+  },
+  {
+    media: '(min-width: 414px)', x1w: 541, x1h: 304, x2w: 1082, x2h: 608,
+  },
 ];
 const IMG_DEFAULT_W = 380;
 const IMG_DEFAULT_H = 213;
@@ -522,8 +536,7 @@ function buildTeaserView(data) {
   // Title mirrors the upstream "Hotels in {Region}" header when results share a region,
   // otherwise falls back to a generic label.
   const regions = new Set(data.Hotels.map((h) => h.Region).filter(Boolean));
-  const title =
-    regions.size === 1 ? `Hotels in ${[...regions][0]}` : 'Hotels';
+  const title = regions.size === 1 ? `Hotels in ${[...regions][0]}` : 'Hotels';
 
   return {
     Title: title,
@@ -561,9 +574,8 @@ function decorateHotel(h) {
     KeySellingPoints: ksps,
     PictureSources: IMG_BREAKPOINTS.map((bp) => ({
       media: bp.media,
-      srcset:
-        `${imgVariant(h.Image, bp.x1w, bp.x1h)} 1x, ` +
-        `${imgVariant(h.Image, bp.x2w, bp.x2h)} 2x`,
+      srcset: `${imgVariant(h.Image, bp.x1w, bp.x1h)} 1x, `
+        + `${imgVariant(h.Image, bp.x2w, bp.x2h)} 2x`,
     })),
     ImageDefault: imgVariant(h.Image, IMG_DEFAULT_W, IMG_DEFAULT_H),
   };
@@ -573,8 +585,8 @@ function decorateHotel(h) {
 // decorateIcons() runs over .icon spans and swaps them for <img> at
 // /icons/<name>.svg — so we emit that shape directly and stay compatible
 // whether or not decorateIcons runs on the injected fragment.
-const ICON_PIN = `<span class="icon icon-pin"><img data-icon-name="pin" src="/icons/pin.svg" alt="" loading="lazy"></span>`;
-const ICON_STAR = `<span class="icon icon-star-fill"><img data-icon-name="star-fill" src="/icons/star-fill.svg" alt="" loading="lazy"></span>`;
+const ICON_PIN = '<span class="icon icon-pin"><img data-icon-name="pin" src="/icons/pin.svg" alt="" loading="lazy"></span>';
+const ICON_STAR = '<span class="icon icon-star-fill"><img data-icon-name="star-fill" src="/icons/star-fill.svg" alt="" loading="lazy"></span>';
 
 // Page-wrapped variant for AEM Live's json2html overlay. helix-html2md needs
 // a full document with <main> for content extraction; the bare block template
@@ -680,9 +692,9 @@ function safeJson(text, fallback) {
   }
 }
 
-function json(payload, status = 200, origin) {
+function json(payload, status, origin) {
   return new Response(JSON.stringify(payload), {
-    status,
+    status: status ?? 200,
     headers: {
       ...corsHeaders(origin),
       'content-type': 'application/json; charset=utf-8',
